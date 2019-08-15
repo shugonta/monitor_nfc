@@ -19,6 +19,9 @@ class NFCCharacteristic(Characteristic):
 
         self._updateValueCallback = None
 
+    def Update(self, value):
+        self._updateValueCallback(value)
+
     def onReadRequest(self, offset, callback):
         monitor_detected = (self._monitor.CARD_DETECTED | self._monitor.ID_DETECTED << 1)
         callback(Characteristic.RESULT_SUCCESS, array.array('B', [monitor_detected]))
