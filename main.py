@@ -3,16 +3,18 @@ import sys
 import signal
 from NFCCharacteristic import *
 from monitor import *
+from define import Define
 
 print('bleno - echo')
 
 bleno = Bleno()
-monitor = Monitor()
+monitor = Monitor(ssid_target=Define.SSID_TARGET)
 
-SERVICE_UUID = '54c3259f-a142-4711-bbca-2efba019868e'
-CHARACTERISTIC_UUID = '5170e77f-4076-40b7-9a87-15fbe60e816d'
+SERVICE_UUID = Define.SERVICE_UUID
+CHARACTERISTIC_UUID = Define.CHARACTERISTIC_UUID
 
 characteristics = NFCCharacteristic(CHARACTERISTIC_UUID, monitor)
+connected_device = []
 
 
 def onStateChange(state):
@@ -39,22 +41,37 @@ def onAdvertisingStart(error):
         ])
 
 
+def onDisconnected(clientAddress):
+    connected_device.remove(clientAddress)
+    if len(connected_device) == 0 and monitor.state.get("MONITORING"):
+        monitor.stop()
+    print("onDisconnected", connected_device)
+
+
+def onAccept(clientAddress):
+    connected_device.append(clientAddress)
+    if len(connected_device) > 0 and not monitor.state.get("MONITORING"):
+        monitor.start()
+    print("Accepted", connected_device)
+
+
 def nfcUpdate(tag):
-    monitor_detected = (monitor.CARD_DETECTED | monitor.ID_DETECTED << 1)
-    characteristics.Update(array.array('B', [monitor_detected]))
+    monitor_detected = monitor.state.pack()
+    characteristics.Update(array.array('B', monitor_detected))
 
 
 bleno.on('advertisingStart', onAdvertisingStart)
+bleno.on('accept', onAccept)
+bleno.on('disconnect', onDisconnected)
 
 monitor.add_handler(nfcUpdate)
 
 bleno.start()
-monitor.start()
+# monitor.start()
 
 print('Hit <ENTER> to disconnect')
 
-if (sys.version_info > (3, 0)):
-    input()
+input()
 
 bleno.stopAdvertising()
 bleno.disconnect()
