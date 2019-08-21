@@ -8,7 +8,7 @@ from define import Define
 print('bleno - echo')
 
 bleno = Bleno()
-monitor = Monitor(ssid_target=Define.SSID_TARGET)
+monitor = Monitor(ssid_target=Define.SSID_TARGET, scan_interval=Define.SSID_SCAN_INTERVAL)
 
 SERVICE_UUID = Define.SERVICE_UUID
 CHARACTERISTIC_UUID = Define.CHARACTERISTIC_UUID

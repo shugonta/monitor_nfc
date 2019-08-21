@@ -1,7 +1,10 @@
 import nfc
 import threading
-import struct
 import subprocess
+import time
+from sched import scheduler
+
+from _cffi_backend import typeof
 
 
 class ID_State:
@@ -39,17 +42,19 @@ class ID_State:
 
 class Monitor:
 
-    def __init__(self, ssid_target=None) -> None:
+    def __init__(self, ssid_target=None, scan_interval=1) -> None:
         super().__init__()
-        self.thread = None
-        self.thread_end = False
+        self.nfc_thread = None
+        self.scan_thread = None
         self.update_handler = []
         self.state = ID_State()
+        self.scan_scheduler = None
+        self.scan_scheduler_event = None
         if ssid_target is None:
             self.ssid_target = []
         else:
             self.ssid_target = ssid_target
-        self.scanSSID()
+        self.scan_interval = scan_interval
 
     def add_handler(self, handler):
         if handler is not None:
@@ -60,7 +65,6 @@ class Monitor:
             self.update_handler.remove(handler)
 
     def start(self):
-        self.thread_end = False
         self.state.set('CARD_DETECTED', False)
         self.state.set('ID_DETECTED', False)
         self.state.set('MONITORING', True)
@@ -68,8 +72,13 @@ class Monitor:
             self.clf = nfc.ContactlessFrontend('usb')
         except:
             return False
-        self.thread = threading.Thread(target=self.run)
-        self.thread.start()
+        self.nfc_thread = threading.Thread(target=self.run)
+        self.nfc_thread.start()
+        self.scan_scheduler = scheduler(time.time, time.sleep)
+        self.scan_thread = threading.Thread(target=self.run_ssid_scan, args=(self.scan_interval, self.scan_scheduler,))
+        self.scan_thread.start()
+        # self.run_ssid_scan(self.scan_interval, self.scan_scheduler)
+        pass
         return True
 
     def stop(self):
@@ -77,6 +86,7 @@ class Monitor:
         self.state.set('ID_DETECTED', False)
         self.state.set('MONITORING', False)
         self.clf.close()
+        self.scan_scheduler.cancel(self.scan_scheduler_event)
         return True
 
     def run(self):
@@ -115,10 +125,19 @@ class Monitor:
 
         print("released:")
 
-    def scanSSID(self):
+    def run_ssid_scan(self, interval, sc):
+        if isinstance(sc, scheduler):
+            self.scan_scheduler_event = sc.enter(interval, 1, self.scanSSID, (sc, interval))
+            sc.run()
+            print("thread_end")
+            return True
+        return False
+
+    def scanSSID(self, sc, interval):
         stdout = subprocess.check_output("iwlist wlan0 scan | grep 'ESSID:\".\+\"'", shell=True)
         for line in stdout.split():
             ssid = line.decode().lstrip('ESSID:').strip('"')
             if ssid in self.ssid_target:
                 print("ssid found", ssid)
-                pass
+        if isinstance(sc, scheduler):
+            self.scan_scheduler_event = sc.enter(interval, 1, self.scanSSID, (sc, interval))
