@@ -4,8 +4,6 @@ import subprocess
 import time
 from sched import scheduler
 
-from _cffi_backend import typeof
-
 
 class ID_State:
     def __init__(self) -> None:
