@@ -5,12 +5,12 @@ import sys
 import traceback
 
 
-class NFCCharacteristic(Characteristic):
+class MonitorCharacteristic(Characteristic):
     def __init__(self, uuid, monitor):
         self._monitor = None
         Characteristic.__init__(self, {
             'uuid': uuid,
-            'properties': ['read', 'write', 'notify'],
+            'properties': ['read', 'notify'],
             'value': None
         })
         if monitor:
@@ -30,19 +30,19 @@ class NFCCharacteristic(Characteristic):
         pass
         # self._value = data
         #
-        # print('NFCCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        # print('MonitorCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
         #
         # if self._updateValueCallback:
-        #     print('NFCCharacteristic - onWriteRequest: notifying')
+        #     print('MonitorCharacteristic - onWriteRequest: notifying')
         #
         #     self._updateValueCallback(self._value)
         #
         # callback(Characteristic.RESULT_SUCCESS)
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
-        print('NFCCharacteristic - onSubscribe')
+        print('MonitorCharacteristic - onSubscribe')
         self._updateValueCallback = updateValueCallback
 
     def onUnsubscribe(self):
-        print('NFCCharacteristic - onUnsubscribe')
+        print('MonitorCharacteristic - onUnsubscribe')
         self._updateValueCallback = None

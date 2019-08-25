@@ -10,6 +10,7 @@ class ID_State:
         self._card_detected = False
         self._id_detected = False
         self._monitoring = False
+        self._ssid_found = False
         super().__init__()
 
     def set(self, key, val):
@@ -22,6 +23,9 @@ class ID_State:
         elif key == 'MONITORING':
             self._monitoring = val
             return True
+        elif key == 'SSID':
+            self._ssid_found = val
+            return True
         return False
 
     def get(self, key):
@@ -31,10 +35,12 @@ class ID_State:
             return self._id_detected
         elif key == 'MONITORING':
             return self._monitoring
+        elif key == 'SSID':
+            return self._ssid_found
         return False
 
     def pack(self):
-        int_array = [(self._id_detected << 2 | self._card_detected << 1 | self._monitoring)]
+        int_array = [(self._ssid_found << 3 | self._id_detected << 2 | self._card_detected << 1 | self._monitoring)]
         return int_array
 
 
@@ -48,6 +54,7 @@ class Monitor:
         self.state = ID_State()
         self.scan_scheduler = None
         self.scan_scheduler_event = None
+        self.scan_thread_end = True
         if ssid_target is None:
             self.ssid_target = []
         else:
@@ -72,6 +79,7 @@ class Monitor:
             return False
         self.nfc_thread = threading.Thread(target=self.run)
         self.nfc_thread.start()
+        self.scan_thread_end = False
         self.scan_scheduler = scheduler(time.time, time.sleep)
         self.scan_thread = threading.Thread(target=self.run_ssid_scan, args=(self.scan_interval, self.scan_scheduler,))
         self.scan_thread.start()
@@ -84,7 +92,12 @@ class Monitor:
         self.state.set('ID_DETECTED', False)
         self.state.set('MONITORING', False)
         self.clf.close()
-        self.scan_scheduler.cancel(self.scan_scheduler_event)
+        self.scan_thread_end = True
+        try:
+            self.scan_scheduler.cancel(self.scan_scheduler_event)
+        except ValueError:
+            print("already canceled.")
+
         return True
 
     def run(self):
@@ -132,10 +145,35 @@ class Monitor:
         return False
 
     def scanSSID(self, sc, interval):
-        stdout = subprocess.check_output("iwlist wlan0 scan | grep 'ESSID:\".\+\"'", shell=True)
-        for line in stdout.split():
-            ssid = line.decode().lstrip('ESSID:').strip('"')
-            if ssid in self.ssid_target:
-                print("ssid found", ssid)
-        if isinstance(sc, scheduler):
+        scaned = True
+        try:
+            stdout = subprocess.check_output("iwlist wlan0 scan | grep 'ESSID:\".\+\"'", shell=True)
+            print("scaned")
+            ssid_found = False
+            for line in stdout.split():
+                ssid = line.decode().lstrip('ESSID:').strip('"')
+                if ssid in self.ssid_target:
+                    ssid_found = True
+
+            if ssid_found and not self.state.get('SSID'):
+                self.state.set('SSID', True)
+                # update hanlder呼び出し
+                if len(self.update_handler) > 0:
+                    for handler in self.update_handler:
+                        handler(None)
+                print("ssid found")
+            elif not ssid_found and self.state.get('SSID'):
+                self.state.set('SSID', False)
+                # update hanlder呼び出し
+                if len(self.update_handler) > 0:
+                    for handler in self.update_handler:
+                        handler(None)
+                print("ssid removed")
+
+        except subprocess.CalledProcessError:
+            scaned = False
+
+        if not self.scan_thread_end and isinstance(sc, scheduler):
             self.scan_scheduler_event = sc.enter(interval, 1, self.scanSSID, (sc, interval))
+
+        return scaned

@@ -1,19 +1,27 @@
 from pybleno import *
 import sys
 import signal
-from NFCCharacteristic import *
+from MonitorCharacteristic import *
+from SSIDCharacteristic import *
 from monitor import *
 from define import Define
+from config import Config
 
 print('bleno - echo')
 
 bleno = Bleno()
-monitor = Monitor(ssid_target=Define.SSID_TARGET, scan_interval=Define.SSID_SCAN_INTERVAL)
+config = Config(Define.CONFIG_FILE)
+ssid_target = config.getSSIDList()
+config.removeSSIDList('iPhone')
+
+monitor = Monitor(ssid_target=ssid_target, scan_interval=Define.SSID_SCAN_INTERVAL)
 
 SERVICE_UUID = Define.SERVICE_UUID
 CHARACTERISTIC_UUID = Define.CHARACTERISTIC_UUID
+SSID_CHARACTERISTIC_UUID = Define.SSID_CHARACTERISTIC_UUID
 
-characteristics = NFCCharacteristic(CHARACTERISTIC_UUID, monitor)
+characteristics = MonitorCharacteristic(CHARACTERISTIC_UUID, monitor)
+ssid_characteristics = SSIDCharacteristic(SSID_CHARACTERISTIC_UUID, config)
 connected_device = []
 
 
@@ -36,7 +44,7 @@ def onAdvertisingStart(error):
         bleno.setServices([
             BlenoPrimaryService({
                 'uuid': SERVICE_UUID,
-                'characteristics': [characteristics]
+                'characteristics': [characteristics, ssid_characteristics]
             })
         ])
 
