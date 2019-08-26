@@ -148,7 +148,6 @@ class Monitor:
         scaned = True
         try:
             stdout = subprocess.check_output("iwlist wlan0 scan | grep 'ESSID:\".\+\"'", shell=True)
-            print("scaned")
             ssid_found = False
             for line in stdout.split():
                 ssid = line.decode().lstrip('ESSID:').strip('"')
