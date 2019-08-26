@@ -9,10 +9,15 @@ from config import Config
 
 print('bleno - echo')
 
+
+def onSSIDConfigChange(target_ssid_list):
+    monitor.ssid_target = target_ssid_list
+
+
 bleno = Bleno()
 config = Config(Define.CONFIG_FILE)
+config.setChangeHandler(onSSIDConfigChange)
 ssid_target = config.getSSIDList()
-config.removeSSIDList('iPhone')
 
 monitor = Monitor(ssid_target=ssid_target, scan_interval=Define.SSID_SCAN_INTERVAL)
 

@@ -15,17 +15,16 @@ class SSIDCharacteristic(Characteristic):
         })
 
     def onReadRequest(self, offset, callback):
-        ssid_cnt = len(self._config.getSSIDList())
-        callback(Characteristic.RESULT_SUCCESS, array.array('B', [ssid_cnt]))
+        ssid_list = ",".join(self._config.getSSIDList())
+        callback(Characteristic.RESULT_SUCCESS, array.array('B', ssid_list.encode("utf-8")))
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
-        self._value = data
-
-        print('MonitorCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        ssid_list = data.decode("utf-8")
+        self._config.setSSIDList(ssid_list.split(","))
 
         # if self._updateValueCallback:
         #     print('MonitorCharacteristic - onWriteRequest: notifying')
         #
         #     self._updateValueCallback(self._value)
         #
-        # callback(Characteristic.RESULT_SUCCESS)
+        callback(Characteristic.RESULT_SUCCESS)
