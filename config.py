@@ -30,11 +30,11 @@ class Config:
                     self.config.set('SSID', 'target_ssid', target_ssids)
                 else:
                     target_ssids = ','.join(target_ssid_list)
-                    self.config.set('SSID', 'target_ssid', ("%s", target_ssids))
+                    self.config.set('SSID', 'target_ssid', target_ssids)
             else:
                 self.config.add_section('SSID')
                 target_ssids = ','.join(target_ssid_list)
-                self.config.set('SSID', 'target_ssid', ("%s", target_ssids))
+                self.config.set('SSID', 'target_ssid', target_ssids)
 
         with open(self.configfile, 'w') as file:
             self.config.write(file)
