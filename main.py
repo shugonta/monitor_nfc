@@ -82,12 +82,13 @@ monitor.add_handler(nfcUpdate)
 bleno.start()
 # monitor.start()
 
-print('Hit <ENTER> to disconnect')
+while True:
+    try:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        bleno.stopAdvertising()
+        bleno.disconnect()
 
-input()
+        print('terminated.')
+        sys.exit(1)
 
-bleno.stopAdvertising()
-bleno.disconnect()
-
-print('terminated.')
-sys.exit(1)
